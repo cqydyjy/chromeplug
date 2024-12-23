@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="128" height="128" version="1.1" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- 脸部背景 -->
+  <circle cx="64" cy="64" r="56" fill="#FFD700"/>
+  
+  <!-- 眼睛 -->
+  <circle cx="45" cy="55" r="8" fill="#000000"/>
+  <circle cx="83" cy="55" r="8" fill="#000000"/>
+  
+  <!-- 眼睛的光点 -->
+  <circle cx="48" cy="52" r="3" fill="#FFFFFF"/>
+  <circle cx="86" cy="52" r="3" fill="#FFFFFF"/>
+  
+  <!-- 笑脸 -->
+  <path d="M40,75 Q64,95 88,75" stroke="#000000" stroke-width="6" fill="none"/>
+  
+  <!-- 脸颊 -->
+  <circle cx="35" cy="70" r="10" fill="#FFB6C1" opacity="0.5"/>
+  <circle cx="93" cy="70" r="10" fill="#FFB6C1" opacity="0.5"/>
+  
+  <!-- 状态指示器 -->
+  <circle cx="108" cy="108" r="16" fill="#4CAF50"/>
+  <text x="108" y="115" text-anchor="middle" fill="white" font-size="20" font-family="Arial">✓</text>
+</svg> 
