@@ -12,6 +12,24 @@
       <span class="slider round"></span>
     </label>
     <p id="status">当前状态: 未锁定</p>
+    
+    <!-- 添加备注功能 -->
+    <div class="note-section">
+      <h3>页面备注</h3>
+      <textarea id="pageNote" placeholder="在此输入页面备注..." rows="3"></textarea>
+      <div class="note-controls">
+        <label class="note-position">
+          <span>位置：</span>
+          <select id="notePosition">
+            <option value="top-right" selected>右上角</option>
+            <option value="top-left">左上角</option>
+            <option value="bottom-right">右下角</option>
+            <option value="bottom-left">左下角</option>
+          </select>
+        </label>
+        <button id="saveNote">保存备注</button>
+      </div>
+    </div>
   </div>
   <script src="popup.js"></script>
 </body>

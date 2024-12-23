@@ -3,7 +3,14 @@
   "name": "页面锁定插件",
   "version": "1.0",
   "description": "一个可以锁定/解锁页面交互的Chrome插件",
-  "permissions": ["activeTab", "scripting"],
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {

@@ -95,4 +95,180 @@ input:checked + .slider:before {
   color: #999 !important;
   text-decoration: none !important;
   cursor: not-allowed !important;
+}
+
+/* 备注功能样式 */
+.note-section {
+  margin-top: 20px;
+  border-top: 1px solid #eee;
+  padding-top: 15px;
+}
+
+.note-section h3 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  color: #333;
+}
+
+#pageNote {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  resize: vertical;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
+.note-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.note-position {
+  font-size: 12px;
+  color: #666;
+}
+
+#notePosition {
+  padding: 4px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+#saveNote {
+  background-color: #2196F3;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+#saveNote:hover {
+  background-color: #1976D2;
+}
+
+/* 页面备注显示样式 */
+.page-note {
+  position: fixed;
+  min-width: 100px;
+  max-width: 500px;
+  min-height: 50px;
+  padding: 10px;
+  background-color: rgba(255, 255, 0, 0.2);
+  border: 1px solid #FFD700;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  z-index: 10000;
+  resize: none;
+  overflow: visible;
+  cursor: move;
+  box-sizing: border-box;
+}
+
+/* 调整手柄的基础样式 */
+.resize-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background-color: #FFD700;
+  border: 1px solid #E5C100;
+  border-radius: 50%;
+  z-index: 10001;
+}
+
+/* 左上角手柄 */
+.resize-handle.top-left {
+  top: -5px;
+  left: -5px;
+  cursor: nw-resize;
+}
+
+/* 右上角手柄 */
+.resize-handle.top-right {
+  top: -5px;
+  right: -5px;
+  cursor: ne-resize;
+}
+
+/* 左下角手柄 */
+.resize-handle.bottom-left {
+  bottom: -5px;
+  left: -5px;
+  cursor: sw-resize;
+}
+
+/* 右下角手柄 */
+.resize-handle.bottom-right {
+  bottom: -5px;
+  right: -5px;
+  cursor: se-resize;
+}
+
+/* 手柄悬停效果 */
+.resize-handle:hover {
+  background-color: #FFE44D;
+  transform: scale(1.2);
+  transition: all 0.2s ease;
+}
+
+/* 调整大小时的视觉反馈 */
+.page-note.resizing {
+  opacity: 0.8;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+}
+
+/* 备注的工具栏 */
+.note-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 5px;
+  margin-bottom: 5px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #FFD700;
+}
+
+.note-toolbar button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 5px;
+  font-size: 12px;
+  color: #666;
+}
+
+.note-toolbar button:hover {
+  color: #333;
+}
+
+/* 备注内容区域 */
+.note-content {
+  min-height: 30px;
+  word-wrap: break-word;
+}
+
+.page-note.top-right {
+  top: 20px;
+  right: 20px;
+}
+
+.page-note.top-left {
+  top: 20px;
+  left: 20px;
+}
+
+.page-note.bottom-right {
+  bottom: 20px;
+  right: 20px;
+}
+
+.page-note.bottom-left {
+  bottom: 20px;
+  left: 20px;
 } 
