@@ -2,8 +2,9 @@
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   // 响应ping请求
   if (request.action === "ping") {
-    sendResponse({ success: true });
-    return;
+    const isLocked = document.body.classList.contains('page-locked');
+    sendResponse({ success: true, isLocked: isLocked });
+    return true;
   }
   
   if (request.action === "toggleLock") {
@@ -85,11 +86,17 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         document.removeEventListener('dragstart', preventDragEvents, true);
         document.removeEventListener('drop', preventDragEvents, true);
       }
+
+      // 保存锁定状态
+      const url = window.location.href;
+      chrome.storage.local.set({ [`lock_${url}`]: request.isLocked });
+
       sendResponse({success: true});
     } catch (error) {
       console.error('切换锁定状态失败:', error);
       sendResponse({success: false, error: error.message});
     }
+    return true;
   } else if (request.action === "updateNote") {
     try {
       // 处理备注更新
@@ -99,10 +106,8 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
       console.error('更新备注失败:', error);
       sendResponse({success: false, error: error.message});
     }
+    return true;
   }
-  
-  // 返回true表示会异步发送响应
-  return true;
 });
 
 // 阻止键盘事件
@@ -127,6 +132,150 @@ function preventClipboardEvents(e) {
 function preventDragEvents(e) {
   e.stopPropagation();
   e.preventDefault();
+}
+
+// 页面加载时恢复状态
+document.addEventListener('DOMContentLoaded', function() {
+  restoreLockStatus();
+  restoreNote();
+});
+
+// 如果页面已经加载完成，立即执行恢复
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  restoreLockStatus();
+  restoreNote();
+}
+
+// 恢复锁定状态
+function restoreLockStatus() {
+  const url = window.location.href;
+  chrome.storage.local.get([`lock_${url}`], function(result) {
+    if (result[`lock_${url}`]) {
+      // 添加锁定类
+      document.body.classList.add('page-locked');
+      
+      // 禁用所有表单元素
+      const formElements = document.querySelectorAll('input, textarea, select, button');
+      formElements.forEach(element => {
+        element.setAttribute('disabled', 'true');
+        element.style.pointerEvents = 'none';
+      });
+
+      // 禁用所有链接
+      const links = document.querySelectorAll('a');
+      links.forEach(link => {
+        link.style.pointerEvents = 'none';
+        link.setAttribute('tabindex', '-1');
+      });
+
+      // 阻止键盘事件
+      document.addEventListener('keydown', preventKeyboardEvents, true);
+      document.addEventListener('keyup', preventKeyboardEvents, true);
+      document.addEventListener('keypress', preventKeyboardEvents, true);
+
+      // 阻止鼠标事件
+      document.addEventListener('click', preventMouseEvents, true);
+      document.addEventListener('dblclick', preventMouseEvents, true);
+      document.addEventListener('mousedown', preventMouseEvents, true);
+      document.addEventListener('mouseup', preventMouseEvents, true);
+      document.addEventListener('contextmenu', preventMouseEvents, true);
+
+      // 阻止复制粘贴
+      document.addEventListener('copy', preventClipboardEvents, true);
+      document.addEventListener('cut', preventClipboardEvents, true);
+      document.addEventListener('paste', preventClipboardEvents, true);
+
+      // 阻止拖拽
+      document.addEventListener('drag', preventDragEvents, true);
+      document.addEventListener('dragstart', preventDragEvents, true);
+      document.addEventListener('drop', preventDragEvents, true);
+    }
+  });
+}
+
+// 应用锁定/解锁
+function applyLock(isLocked) {
+  if (isLocked) {
+    // 添加锁定类
+    document.body.classList.add('page-locked');
+    
+    // 禁用所有表单元素
+    const formElements = document.querySelectorAll('input, textarea, select, button');
+    formElements.forEach(element => {
+      element.setAttribute('disabled', 'true');
+      element.style.pointerEvents = 'none';
+    });
+
+    // 禁用所有链接
+    const links = document.querySelectorAll('a');
+    links.forEach(link => {
+      link.style.pointerEvents = 'none';
+      link.setAttribute('tabindex', '-1');
+    });
+
+    // 阻止键盘事件
+    document.addEventListener('keydown', preventKeyboardEvents, true);
+    document.addEventListener('keyup', preventKeyboardEvents, true);
+    document.addEventListener('keypress', preventKeyboardEvents, true);
+
+    // 阻止鼠标事件
+    document.addEventListener('click', preventMouseEvents, true);
+    document.addEventListener('dblclick', preventMouseEvents, true);
+    document.addEventListener('mousedown', preventMouseEvents, true);
+    document.addEventListener('mouseup', preventMouseEvents, true);
+    document.addEventListener('contextmenu', preventMouseEvents, true);
+
+    // 阻止复制粘贴
+    document.addEventListener('copy', preventClipboardEvents, true);
+    document.addEventListener('cut', preventClipboardEvents, true);
+    document.addEventListener('paste', preventClipboardEvents, true);
+
+    // 阻止拖拽
+    document.addEventListener('drag', preventDragEvents, true);
+    document.addEventListener('dragstart', preventDragEvents, true);
+    document.addEventListener('drop', preventDragEvents, true);
+
+  } else {
+    // 移除锁定类
+    document.body.classList.remove('page-locked');
+    
+    // 启用所有表单元素
+    const formElements = document.querySelectorAll('input, textarea, select, button');
+    formElements.forEach(element => {
+      element.removeAttribute('disabled');
+      element.style.pointerEvents = '';
+    });
+
+    // 启用所有链接
+    const links = document.querySelectorAll('a');
+    links.forEach(link => {
+      link.style.pointerEvents = '';
+      link.removeAttribute('tabindex');
+    });
+
+    // 移除所有事件监听器
+    document.removeEventListener('keydown', preventKeyboardEvents, true);
+    document.removeEventListener('keyup', preventKeyboardEvents, true);
+    document.removeEventListener('keypress', preventKeyboardEvents, true);
+
+    document.removeEventListener('click', preventMouseEvents, true);
+    document.removeEventListener('dblclick', preventMouseEvents, true);
+    document.removeEventListener('mousedown', preventMouseEvents, true);
+    document.removeEventListener('mouseup', preventMouseEvents, true);
+    document.removeEventListener('contextmenu', preventMouseEvents, true);
+
+    document.removeEventListener('copy', preventClipboardEvents, true);
+    document.removeEventListener('cut', preventClipboardEvents, true);
+    document.removeEventListener('paste', preventClipboardEvents, true);
+
+    document.removeEventListener('drag', preventDragEvents, true);
+    document.removeEventListener('dragstart', preventDragEvents, true);
+    document.removeEventListener('drop', preventDragEvents, true);
+  }
+
+  // 保存锁定状态
+  const url = window.location.href;
+  chrome.storage.local.set({ [`lock_${url}`]: isLocked });
 }
 
 // 页面加载时恢复备注（使用多个事件确保可靠性）
@@ -155,11 +304,6 @@ function restoreNote() {
 // 使用多个事件监听器确保备注能够恢复
 document.addEventListener('DOMContentLoaded', restoreNote);
 window.addEventListener('load', restoreNote);
-
-// 如果页面已经加载完成，立即执行恢复
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-  restoreNote();
-}
 
 // 更新页面备注
 function updatePageNote(noteText, position = 'top-right') {

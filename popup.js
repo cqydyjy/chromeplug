@@ -39,15 +39,10 @@ document.addEventListener('DOMContentLoaded', function() {
       await injectContentScriptIfNeeded(currentTab);
 
       // 获取锁定状态
-      const results = await chrome.scripting.executeScript({
-        target: {tabId: currentTab.id},
-        function: checkLockStatus
-      });
-
-      if (results && results[0]) {
-        toggleButton.checked = results[0].result;
-        updateStatus(results[0].result);
-      }
+      const lockStatus = await chrome.storage.local.get([`lock_${currentTab.url}`]);
+      const isLocked = lockStatus[`lock_${currentTab.url}`] || false;
+      toggleButton.checked = isLocked;
+      updateStatus(isLocked);
 
       // 获取当前页面的备注
       const result = await chrome.storage.local.get([currentTab.url]);
@@ -72,14 +67,23 @@ document.addEventListener('DOMContentLoaded', function() {
       updateStatus(isLocked);
 
       const tabs = await chrome.tabs.query({active: true, currentWindow: true});
-      await chrome.scripting.executeScript({
-        target: {tabId: tabs[0].id},
-        function: togglePageLock,
-        args: [isLocked]
+      const currentTab = tabs[0];
+
+      // 保存锁定状态到storage
+      await chrome.storage.local.set({ [`lock_${currentTab.url}`]: isLocked });
+
+      // 发送消息到content script
+      await chrome.tabs.sendMessage(currentTab.id, {
+        action: "toggleLock",
+        isLocked: isLocked
       });
+
     } catch (error) {
       console.error('切换状态失败:', error);
       statusText.textContent = '操作失败，请刷新页面重试';
+      // 恢复按钮状态
+      toggleButton.checked = !toggleButton.checked;
+      updateStatus(!toggleButton.checked);
     }
   });
 
