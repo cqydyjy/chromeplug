@@ -153,75 +153,33 @@ input:checked + .slider:before {
   background-color: #1976D2;
 }
 
+/* 备注和倒计时的容器 */
+.note-container {
+  position: fixed;
+  z-index: 10000;
+  cursor: move;
+  pointer-events: auto;
+  resize: none;
+}
+
 /* 页面备注显示样式 */
 .page-note {
-  position: fixed;
-  min-width: 100px;
+  position: relative;
+  min-width: 200px;
   max-width: 500px;
-  min-height: 50px;
+  min-height: 80px;
   padding: 10px;
   background-color: rgba(255, 255, 0, 0.2);
   border: 1px solid #FFD700;
   border-radius: 4px;
   font-size: 12px;
   line-height: 1.4;
-  z-index: 10000;
   resize: none;
-  overflow: visible;
-  cursor: move;
+  overflow: hidden;
   box-sizing: border-box;
-}
-
-/* 调整手柄的基础样式 */
-.resize-handle {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  background-color: #FFD700;
-  border: 1px solid #E5C100;
-  border-radius: 50%;
-  z-index: 10001;
-}
-
-/* 左上角手柄 */
-.resize-handle.top-left {
-  top: -5px;
-  left: -5px;
-  cursor: nw-resize;
-}
-
-/* 右上角手柄 */
-.resize-handle.top-right {
-  top: -5px;
-  right: -5px;
-  cursor: ne-resize;
-}
-
-/* 左下角手柄 */
-.resize-handle.bottom-left {
-  bottom: -5px;
-  left: -5px;
-  cursor: sw-resize;
-}
-
-/* 右下角手柄 */
-.resize-handle.bottom-right {
-  bottom: -5px;
-  right: -5px;
-  cursor: se-resize;
-}
-
-/* 手柄悬停效果 */
-.resize-handle:hover {
-  background-color: #FFE44D;
-  transform: scale(1.2);
-  transition: all 0.2s ease;
-}
-
-/* 调整大小时的视觉反馈 */
-.page-note.resizing {
-  opacity: 0.8;
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 /* 备注的工具栏 */
@@ -230,27 +188,109 @@ input:checked + .slider:before {
   justify-content: flex-end;
   gap: 5px;
   margin-bottom: 5px;
-  padding-bottom: 5px;
-  border-bottom: 1px solid #FFD700;
-}
-
-.note-toolbar button {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 2px 5px;
-  font-size: 12px;
-  color: #666;
-}
-
-.note-toolbar button:hover {
-  color: #333;
+  padding-bottom: 3px;
+  border-bottom: 1px solid rgba(255, 215, 0, 0.5);
 }
 
 /* 备注内容区域 */
 .note-content {
+  flex-grow: 1;
   min-height: 30px;
   word-wrap: break-word;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+/* 倒计时显示样式 */
+.countdown-display {
+  width: 100%;
+  background-color: rgba(33, 150, 243, 0.7);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: bold;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  pointer-events: auto;
+  resize: none;
+  box-sizing: border-box;
+  margin-top: auto;
+}
+
+/* 容器位置类 */
+.note-container.top-right {
+  top: 20px;
+  right: 20px;
+}
+
+.note-container.top-left {
+  top: 20px;
+  left: 20px;
+}
+
+.note-container.bottom-right {
+  bottom: 20px;
+  right: 20px;
+}
+
+.note-container.bottom-left {
+  bottom: 20px;
+  left: 20px;
+}
+
+/* 拖动时的样式 */
+.note-container.dragging {
+  opacity: 0.8;
+  cursor: move;
+}
+
+/* 闪烁提醒动画 */
+@keyframes blink {
+  0% { opacity: 1; background-color: rgba(244, 67, 54, 0.9); }
+  50% { opacity: 0.7; background-color: rgba(33, 150, 243, 0.9); }
+  100% { opacity: 1; background-color: rgba(244, 67, 54, 0.9); }
+}
+
+.countdown-display.blink {
+  animation: blink 1s infinite;
+  background-color: rgba(244, 67, 54, 0.9);
+}
+
+/* 时间输入部分样式 */
+.time-input input[type="text"] {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: monospace;
+  margin-bottom: 5px;
+}
+
+.time-format-hint {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 10px;
+  font-style: italic;
+}
+
+.time-input input[type="text"]:focus {
+  border-color: #2196F3;
+  outline: none;
+  box-shadow: 0 0 3px rgba(33, 150, 243, 0.3);
+}
+
+/* 错误状态 */
+.time-input input[type="text"].error {
+  border-color: #f44336;
+  background-color: #fff8f8;
+}
+
+.time-input input[type="text"].error + .time-format-hint {
+  color: #f44336;
 }
 
 .page-note.top-right {
@@ -271,4 +311,71 @@ input:checked + .slider:before {
 .page-note.bottom-left {
   bottom: 20px;
   left: 20px;
+}
+
+/* 定时提醒部分的样式 */
+.timer-section {
+  margin-top: 20px;
+  padding: 15px;
+  border-top: 1px solid #eee;
+}
+
+.timer-section h2 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 16px;
+}
+
+.time-input {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.time-input input {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.time-input input[type="number"] {
+  width: 100px;
+}
+
+.target-time {
+  font-size: 14px;
+  color: #666;
+  margin-top: 5px;
+}
+
+#setTimer, #cancelTimer {
+  background-color: #2196f3;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-right: 10px;
+}
+
+#cancelTimer {
+  background-color: #f44336;
+}
+
+#setTimer:hover {
+  background-color: #1976d2;
+}
+
+#cancelTimer:hover {
+  background-color: #d32f2f;
+}
+
+/* 备注和倒计时 */
+.note-container {
+  position: fixed;
+  z-index: 10000;
+  pointer-events: none;
 } 

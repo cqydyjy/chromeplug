@@ -5,30 +5,42 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="popup-container">
-    <h2>页面锁定控制</h2>
-    <label class="switch">
-      <input type="checkbox" id="lockToggle">
-      <span class="slider round"></span>
-    </label>
-    <p id="status">当前状态: 未锁定</p>
+  <div class="container">
+    <h1>页面锁定控制</h1>
     
-    <!-- 添加备注功能 -->
+    <div class="control-section">
+      <label class="switch">
+        <input type="checkbox" id="lockToggle">
+        <span class="slider"></span>
+      </label>
+      <p id="status">当前状态: 未锁定</p>
+    </div>
+
     <div class="note-section">
-      <h3>页面备注</h3>
-      <textarea id="pageNote" placeholder="在此输入页面备注..." rows="3"></textarea>
-      <div class="note-controls">
-        <label class="note-position">
-          <span>位置：</span>
-          <select id="notePosition">
-            <option value="top-right" selected>右上角</option>
-            <option value="top-left">左上角</option>
-            <option value="bottom-right">右下角</option>
-            <option value="bottom-left">左下角</option>
-          </select>
-        </label>
-        <button id="saveNote">保存备注</button>
+      <h2>页面备注</h2>
+      <textarea id="noteInput" placeholder="输入页面备注..."></textarea>
+      <select id="notePosition">
+        <option value="top-right">右上角</option>
+        <option value="top-left">左上角</option>
+        <option value="bottom-right">右下角</option>
+        <option value="bottom-left">左下角</option>
+      </select>
+      <button id="saveNote">保存备注</button>
+    </div>
+
+    <div class="timer-section">
+      <h2>定时提醒</h2>
+      <div class="time-input">
+        <input type="text" id="startTime" placeholder="开始时间 (2024-03-19 15:30:00)">
+        <div class="time-format-hint">格式: YYYY-MM-DD HH:mm:ss</div>
+        <input type="number" id="minutesInput" placeholder="输入分钟数" min="1">
+        <div class="target-time">
+          <span>目标时间: </span>
+          <span id="targetTimeDisplay">--:--:--</span>
+        </div>
       </div>
+      <button id="setTimer">设置提醒</button>
+      <button id="cancelTimer" style="display: none;">取消提醒</button>
     </div>
   </div>
   <script src="popup.js"></script>
