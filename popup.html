@@ -6,40 +6,40 @@
 </head>
 <body>
   <div class="container">
-    <h1>页面锁定控制</h1>
-    
-    <div class="control-section">
+    <div class="lock-section">
+      <h2>页面锁定</h2>
       <label class="switch">
         <input type="checkbox" id="lockToggle">
         <span class="slider"></span>
       </label>
-      <p id="status">当前状态: 未锁定</p>
+      <div id="status">当前状态: 未锁定</div>
     </div>
 
     <div class="note-section">
       <h2>页面备注</h2>
-      <textarea id="noteInput" placeholder="输入页面备注..."></textarea>
+      <textarea id="noteInput" placeholder="输入备注内容..."></textarea>
       <select id="notePosition">
+        <option value="center-top">页面中心偏上</option>
+        <option value="center">页面中心</option>
         <option value="top-right">右上角</option>
         <option value="top-left">左上角</option>
         <option value="bottom-right">右下角</option>
         <option value="bottom-left">左下角</option>
       </select>
-      <button id="saveNote">保存备注</button>
-    </div>
-
-    <div class="timer-section">
-      <h2>定时提醒</h2>
-      <div class="time-input">
-        <input type="text" id="startTime" placeholder="开始时间 (2024-03-19 15:30:00)">
-        <div class="time-format-hint">格式: YYYY-MM-DD HH:mm:ss</div>
-        <input type="number" id="minutesInput" placeholder="输入分钟数" min="1">
-        <div class="target-time">
-          <span>目标时间: </span>
-          <span id="targetTimeDisplay">--:--:--</span>
+      
+      <div class="timer-section">
+        <div class="time-input">
+          <input type="text" id="startTime" placeholder="开始时间 (2024-03-19 15:30:00)">
+          <div class="time-format-hint">格式: YYYY-MM-DD HH:mm:ss</div>
+          <input type="number" id="minutesInput" placeholder="输入分钟数" min="1">
+          <div class="target-time">
+            <span>目标时间: </span>
+            <span id="targetTimeDisplay">--:--:--</span>
+          </div>
         </div>
       </div>
-      <button id="setTimer">设置提醒</button>
+      
+      <button id="saveNote">保存备注</button>
       <button id="cancelTimer" style="display: none;">取消提醒</button>
     </div>
   </div>

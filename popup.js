@@ -9,7 +9,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const startTimeInput = document.getElementById('startTime');
   const minutesInput = document.getElementById('minutesInput');
   const targetTimeDisplay = document.getElementById('targetTimeDisplay');
-  const setTimerButton = document.getElementById('setTimer');
   const cancelTimerButton = document.getElementById('cancelTimer');
 
   let timerInterval;
@@ -17,25 +16,63 @@ document.addEventListener('DOMContentLoaded', function() {
   // 检查当前标签页是否可以执行脚本
   function checkIfContentScriptLoaded(tabId) {
     return new Promise((resolve) => {
-      chrome.tabs.sendMessage(tabId, { action: "ping" }, response => {
-        resolve(!!response);
-      });
+      try {
+        chrome.tabs.sendMessage(tabId, { action: "ping" }, response => {
+          if (chrome.runtime.lastError) {
+            resolve(false);
+          } else {
+            resolve(!!response);
+          }
+        });
+      } catch (error) {
+        resolve(false);
+      }
     });
   }
 
   // 注入content script
   async function injectContentScriptIfNeeded(tab) {
-    const isLoaded = await checkIfContentScriptLoaded(tab.id);
-    if (!isLoaded) {
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        files: ['content.js']
-      });
-      await chrome.scripting.insertCSS({
-        target: { tabId: tab.id },
-        files: ['styles.css']
-      });
+    try {
+      const isLoaded = await checkIfContentScriptLoaded(tab.id);
+      if (!isLoaded) {
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ['content.js']
+        });
+        await chrome.scripting.insertCSS({
+          target: { tabId: tab.id },
+          files: ['styles.css']
+        });
+        // 等待脚本加载完成
+        await new Promise(resolve => setTimeout(resolve, 100));
+        // 再次检查确保脚本已加载
+        const isNowLoaded = await checkIfContentScriptLoaded(tab.id);
+        if (!isNowLoaded) {
+          throw new Error('无法加载内容脚本');
+        }
+      }
+      return true;
+    } catch (error) {
+      console.error('注入脚本失败:', error);
+      return false;
     }
+  }
+
+  // 发送消息到content script的包装函数
+  async function sendMessageToContentScript(tabId, message) {
+    return new Promise((resolve, reject) => {
+      try {
+        chrome.tabs.sendMessage(tabId, message, response => {
+          if (chrome.runtime.lastError) {
+            reject(chrome.runtime.lastError);
+          } else {
+            resolve(response);
+          }
+        });
+      } catch (error) {
+        reject(error);
+      }
+    });
   }
 
   // 初始化页面状态
@@ -45,7 +82,10 @@ document.addEventListener('DOMContentLoaded', function() {
       const currentTab = tabs[0];
       
       // 确保content script已加载
-      await injectContentScriptIfNeeded(currentTab);
+      const scriptLoaded = await injectContentScriptIfNeeded(currentTab);
+      if (!scriptLoaded) {
+        throw new Error('无法初始化插件，请刷新页面重试');
+      }
 
       // 获取锁定状态
       const lockStatus = await chrome.storage.local.get([`lock_${currentTab.url}`]);
@@ -58,11 +98,23 @@ document.addEventListener('DOMContentLoaded', function() {
       if (result[currentTab.url]) {
         const noteData = result[currentTab.url];
         noteTextarea.value = noteData.text || '';
-        notePosition.value = noteData.position || 'top-right';
+        notePosition.value = noteData.position?.position || 'top-right';
+        
+        // 如果有定时器数据，恢复定时器状态
+        if (noteData.timer) {
+          const now = new Date().getTime();
+          const targetTime = new Date(noteData.timer.targetTime).getTime();
+          if (targetTime > now) {
+            updateTargetTimeDisplay(new Date(targetTime));
+            cancelTimerButton.style.display = 'block';
+            startTimeInput.value = noteData.timer.startTime;
+            minutesInput.value = noteData.timer.minutes;
+          }
+        }
       }
     } catch (error) {
       console.error('初始化失败:', error);
-      statusText.textContent = '初始化失败，请刷新页面重试';
+      statusText.textContent = error.message || '初始化失败，请刷新页面重试';
     }
   }
 
@@ -99,56 +151,8 @@ document.addEventListener('DOMContentLoaded', function() {
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
   }
 
-  // 设置定时器
-  function setTimer() {
-    let startTime = startTimeInput.value.trim();
-    const minutes = parseInt(minutesInput.value);
-    
-    if (!startTime) {
-      // 如果没有输入时间，使用当前时间
-      startTime = getCurrentFormattedTime();
-      startTimeInput.value = startTime;
-    }
-
-    if (!isValidTimeFormat(startTime)) {
-      alert('请输入正确的时间格式：YYYY-MM-DD HH:mm:ss');
-      return;
-    }
-
-    if (isNaN(minutes) || minutes <= 0) {
-      alert('请输入有效的分钟数！');
-      return;
-    }
-
-    const targetTime = calculateTargetTime(startTime.replace(' ', 'T'), minutes);
-    updateTargetTimeDisplay(targetTime);
-
-    // 存储定时器信息
-    chrome.storage.local.set({
-      timer: {
-        startTime,
-        minutes,
-        targetTime: targetTime.getTime()
-      }
-    });
-
-    // 向当前标签页发送定时器信息
-    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-      chrome.tabs.sendMessage(tabs[0].id, {
-        action: 'setTimer',
-        startTime,
-        minutes,
-        targetTime: targetTime.getTime()
-      });
-    });
-
-    setTimerButton.style.display = 'none';
-    cancelTimerButton.style.display = 'block';
-  }
-
   // 重置定时器界面
   function resetTimerUI() {
-    setTimerButton.style.display = 'block';
     cancelTimerButton.style.display = 'none';
     targetTimeDisplay.textContent = '--:--:--';
     startTimeInput.value = getCurrentFormattedTime();
@@ -179,14 +183,12 @@ document.addEventListener('DOMContentLoaded', function() {
       if (data.timer) {
         const targetTime = new Date(data.timer.targetTime);
         updateTargetTimeDisplay(targetTime);
-        setTimerButton.style.display = 'none';
         cancelTimerButton.style.display = 'block';
       }
     });
   }
 
   // 事件监听器
-  setTimerButton.addEventListener('click', setTimer);
   cancelTimerButton.addEventListener('click', cancelTimer);
 
   // 初始化
@@ -213,7 +215,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     } catch (error) {
       console.error('切换状态失败:', error);
-      statusText.textContent = '操作失败，请���新页面重试';
+      statusText.textContent = '操作失败，请刷新页面重试';
       // 恢复按钮状态
       toggleButton.checked = !toggleButton.checked;
       updateStatus(!toggleButton.checked);
@@ -221,29 +223,64 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // 保存备注
-  saveNoteButton.addEventListener('click', async function() {
+  saveNoteButton.addEventListener('click', async function(e) {
+    e.preventDefault();
+    
     try {
-      const noteText = noteTextarea.value;
-      const position = notePosition.value;
-
       const tabs = await chrome.tabs.query({active: true, currentWindow: true});
       const currentTab = tabs[0];
+      
+      // 确保content script已加载
+      const scriptLoaded = await injectContentScriptIfNeeded(currentTab);
+      if (!scriptLoaded) {
+        throw new Error('无法保存备注，请刷新页面重试');
+      }
+
+      const noteText = noteTextarea.value;
+      const position = notePosition.value;
+      const minutes = parseInt(minutesInput.value);
+      let startTime = startTimeInput.value.trim();
+      let timerData = null;
+
+      // 如果输入了分钟数，则设置定时器
+      if (!isNaN(minutes) && minutes > 0) {
+        if (!startTime) {
+          startTime = getCurrentFormattedTime();
+          startTimeInput.value = startTime;
+        }
+
+        if (!isValidTimeFormat(startTime)) {
+          alert('请输入正确的时间格式：YYYY-MM-DD HH:mm:ss');
+          return;
+        }
+
+        const targetTime = calculateTargetTime(startTime.replace(' ', 'T'), minutes);
+        updateTargetTimeDisplay(targetTime);
+
+        timerData = {
+          startTime,
+          minutes,
+          targetTime: targetTime.getTime()
+        };
+
+        cancelTimerButton.style.display = 'block';
+      }
 
       // 保存到存储
       const data = {};
       data[currentTab.url] = {
         text: noteText,
-        position: position
+        position: position,
+        timer: timerData
       };
       await chrome.storage.local.set(data);
 
       // 更新页面显示
-      const response = await new Promise((resolve) => {
-        chrome.tabs.sendMessage(currentTab.id, {
-          action: "updateNote",
-          note: noteText,
-          position: position
-        }, resolve);
+      const response = await sendMessageToContentScript(currentTab.id, {
+        action: "updateNote",
+        note: noteText,
+        position: position,
+        timer: timerData
       });
 
       if (response && response.success) {
@@ -256,8 +293,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 1000);
       }
     } catch (error) {
-      console.error('保存备注失败:', error);
-      saveNoteButton.textContent = '保存失��';
+      console.error('保存失败:', error);
+      saveNoteButton.textContent = '保存失败';
       saveNoteButton.style.backgroundColor = '#f44336';
       setTimeout(() => {
         saveNoteButton.textContent = '保存备注';

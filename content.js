@@ -104,7 +104,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   } else if (request.action === "updateNote") {
     try {
       // 处理备注更新
-      updatePageNote(request.note, request.position);
+      updatePageNote(request.note, request.position, request.timer);
       sendResponse({success: true});
     } catch (error) {
       console.error('更新备注失败:', error);
@@ -132,7 +132,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   }
 });
 
-// 阻�����事件
+// 阻事件
 function preventKeyboardEvents(e) {
   e.stopPropagation();
   e.preventDefault();
@@ -185,7 +185,7 @@ function restoreLockStatus() {
         element.style.pointerEvents = 'none';
       });
 
-      // 禁用所有���接
+      // 禁用所有链接
       const links = document.querySelectorAll('a');
       links.forEach(link => {
         link.style.pointerEvents = 'none';
@@ -313,31 +313,12 @@ function restoreNote() {
       const noteData = result[url];
       if (noteData.text) {
         // 恢复备注内容和位置
-        const container = updatePageNote(noteData.text, noteData.position?.position || 'top-right');
-        if (container && noteData.position) {
-          // 等待一小段时间后应用位置，确保DOM完全加载
-          setTimeout(() => {
-            restoreNotePosition(container, noteData.position);
-            
-            // 如果有定时器数据，恢复定时器
-            if (noteData.timer) {
-              const now = new Date().getTime();
-              const targetTime = new Date(noteData.timer.targetTime).getTime();
-              
-              // 只有当目标时间还没到时才恢复定时器
-              if (targetTime > now) {
-                const display = createCountdownDisplay();
-                // 立即更新一次显示
-                updateCountdown(targetTime);
-                // 设置定时器
-                setPageTimer(noteData.timer);
-              } else {
-                // 如果时间已经到了，清除存储的定时器状态
-                delete noteData.timer;
-                chrome.storage.local.set({ [url]: noteData });
-              }
-            }
-          }, 100);
+        updatePageNote(noteData.text, noteData.position?.position || 'center-top', noteData.timer);
+        
+        // 如果有保存的位置数据，则恢复位置
+        const container = document.querySelector('.note-container');
+        if (container && noteData.position && noteData.position.transform) {
+          restoreNotePosition(container, noteData.position);
         }
       }
     }
@@ -349,7 +330,7 @@ document.addEventListener('DOMContentLoaded', restoreNote);
 window.addEventListener('load', restoreNote);
 
 // 更新页面备注
-function updatePageNote(noteText, position = 'top-right') {
+function updatePageNote(noteText, position = 'center-top', timerData = null) {
   try {
     // 移除现有的备注和倒计时容器
     const existingContainer = document.querySelector('.note-container');
@@ -383,7 +364,7 @@ function updatePageNote(noteText, position = 'top-right') {
     noteElement.appendChild(toolbar);
     noteElement.appendChild(content);
     
-    // 将备注添加到容器
+    // ��备注添加到容器
     container.appendChild(noteElement);
     
     // 添加到页面
@@ -394,19 +375,35 @@ function updatePageNote(noteText, position = 'top-right') {
       'top-right': { top: '20px', right: '20px' },
       'top-left': { top: '20px', left: '20px' },
       'bottom-right': { bottom: '20px', right: '20px' },
-      'bottom-left': { bottom: '20px', left: '20px' }
+      'bottom-left': { bottom: '20px', left: '20px' },
+      'center': { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' },
+      'center-top': { top: '30%', left: '50%', transform: 'translate(-50%, -50%)' }
     };
 
     const defaultPos = defaultPositions[position];
-    Object.assign(container.style, defaultPos);
+    if (defaultPos) {
+      Object.assign(container.style, defaultPos);
+    }
 
     // 初始化拖动功能
     initContainerDrag(container);
-    
-    return container;
+
+    // 如果有定时器数据，创建倒计时显示
+    if (timerData) {
+      const targetTime = new Date(timerData.targetTime);
+      const now = new Date().getTime();
+      if (targetTime.getTime() > now) {
+        const display = createCountdownDisplay();
+        if (display) {
+          startCountdown(display, targetTime);
+        }
+      }
+    }
+
+    return { success: true };
   } catch (error) {
     console.error('更新备注失败:', error);
-    return null;
+    return { success: false, error: error.message };
   }
 }
 
@@ -608,7 +605,7 @@ function initNoteResize(noteElement) {
       newWidth = Math.max(100, newWidth);
       newHeight = Math.max(50, newHeight);
       
-      // 应用最大尺寸限制
+      // 应用最大尺��限制
       newWidth = Math.min(500, newWidth);
       newHeight = Math.min(400, newHeight);
 
@@ -634,8 +631,8 @@ function initNoteResize(noteElement) {
 
 // 恢复备注位置和大小
 function restoreNotePosition(container, position) {
-  if (position) {
-    // 恢复容器位置
+  if (position && position.transform) {
+    // 如果有保存的位置数据，则恢复
     if (position.transform) container.style.transform = position.transform;
     if (position.top) container.style.top = position.top;
     if (position.left) container.style.left = position.left;
@@ -645,7 +642,7 @@ function restoreNotePosition(container, position) {
       container.className = `note-container ${position.position}`;
     }
     
-    // 恢复备注大小
+    // 恢复备注��小
     const noteElement = container.querySelector('.page-note');
     if (noteElement && position.noteSize) {
       if (position.noteSize.width) noteElement.style.width = position.noteSize.width;
@@ -658,10 +655,10 @@ function restoreNotePosition(container, position) {
       if (position.countdownSize.width) countdownElement.style.width = position.countdownSize.width;
       if (position.countdownSize.height) countdownElement.style.height = position.countdownSize.height;
     }
-    
-    // 确保备注在视口内
-    ensureNoteInViewport(container);
   }
+  
+  // 确保备注在视口内
+  ensureNoteInViewport(container);
 }
 
 // 确保备注在视口内
@@ -735,7 +732,7 @@ function initNoteResize(noteElement) {
     const startY = e.clientY;
     const startWidth = noteElement.offsetWidth;
     const startHeight = noteElement.offsetHeight;
-    const handlePosition = e.target.className.split(' ')[1]; // ��取手柄位置
+    const handlePosition = e.target.className.split(' ')[1]; // 获取手柄位置
     
     const startRect = noteElement.getBoundingClientRect();
     const startTransform = getComputedStyle(noteElement).transform;
@@ -804,6 +801,22 @@ function initNoteResize(noteElement) {
     document.addEventListener('mousemove', resize);
     document.addEventListener('mouseup', stopResize);
   }
+}
+
+// 开始倒计时
+function startCountdown(display, targetTime) {
+  // 清除现有的定时器
+  if (countdownInterval) {
+    clearInterval(countdownInterval);
+  }
+
+  // 立即更新一次显示
+  updateCountdown(targetTime.getTime());
+
+  // 设置新的定时器
+  countdownInterval = setInterval(() => {
+    updateCountdown(targetTime.getTime());
+  }, 1000);
 }
 
 // 更新倒计时显示
@@ -970,7 +983,7 @@ function restoreTimer() {
       const now = new Date().getTime();
       const targetTime = new Date(timerData.targetTime).getTime();
       
-      // 只有当目标时间还没到时才恢复���时器
+      // 只有当目标时间还没到时才恢复定时器
       if (targetTime > now) {
         // 创建新的倒计时显示
         const display = createCountdownDisplay();
@@ -995,7 +1008,7 @@ function restoreTimer() {
         // 设置定时器
         setPageTimer(timerData);
       } else {
-        // 如果时间已经到了，清除存储的定时器状态
+        // 如果时间已经到了，删除存储的定时器状态
         const data = result[url];
         delete data.timer;
         chrome.storage.local.set({ [url]: data });
