@@ -1,106 +1,82 @@
-let blinkingTabs = new Map(); // 使用Map存储所有闪烁的标签页信息
+// 存储闪烁定时器的对象
+const blinkIntervals = {};
 
-// 请求通知权限
-chrome.runtime.onInstalled.addListener(function() {
-  // 检查通知权限
-  chrome.notifications.getPermissionLevel(function(level) {
-    if (level !== 'granted') {
-      // 如果没有权限，尝试请求权限
-      chrome.permissions.request({
-        permissions: ['notifications']
-      });
-    }
-  });
-});
-
-// 存储通知URL的映射
-let notificationUrlMap = new Map();
-
+// 监听来自content script的消息
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   if (request.action === 'startTabBlinking') {
-    if (sender.tab) {
-      const tabId = sender.tab.id;
-      
-      // 保存原始favicon和闪烁间隔
+    const tabId = sender.tab.id;
+    
+    // 清除现有的闪烁定时器
+    if (blinkIntervals[tabId]) {
+      clearInterval(blinkIntervals[tabId].interval);
+      clearTimeout(blinkIntervals[tabId].timeout);
+      delete blinkIntervals[tabId];
+    }
+    
+    // 开始新的闪烁
+    let isBlinking = false;
+    const interval = setInterval(() => {
       chrome.tabs.get(tabId, function(tab) {
-        const tabInfo = {
-          originalFavicon: tab.favIconUrl,
-          interval: null
-        };
-        
-        // 清除现有的闪烁间隔
-        if (blinkingTabs.has(tabId)) {
-          clearInterval(blinkingTabs.get(tabId).interval);
+        if (chrome.runtime.lastError) {
+          clearInterval(interval);
+          return;
         }
-        
-        let isBlinking = false;
-        tabInfo.interval = setInterval(() => {
-          isBlinking = !isBlinking;
-          if (isBlinking) {
-            const color = request.color || '#FFA500';
+        isBlinking = !isBlinking;
+        chrome.tabs.sendMessage(tabId, {
+          action: 'setFavicon',
+          url: isBlinking ? null : tab.favIconUrl
+        });
+      });
+    }, 500);
+
+    // 30秒后自动停止闪烁
+    const timeout = setTimeout(() => {
+      if (blinkIntervals[tabId]) {
+        clearInterval(blinkIntervals[tabId].interval);
+        chrome.tabs.get(tabId, function(tab) {
+          if (!chrome.runtime.lastError) {
             chrome.tabs.sendMessage(tabId, {
               action: 'setFavicon',
-              color: color
-            });
-          } else {
-            chrome.tabs.sendMessage(tabId, {
-              action: 'setFavicon',
-              url: tabInfo.originalFavicon
+              url: tab.favIconUrl
             });
           }
-        }, 500);
-        
-        blinkingTabs.set(tabId, tabInfo);
-      });
-    }
+        });
+        delete blinkIntervals[tabId];
+      }
+    }, 30000);
+
+    // 保存定时器引用
+    blinkIntervals[tabId] = {
+      interval: interval,
+      timeout: timeout
+    };
+
   } else if (request.action === 'stopTabBlinking') {
-    // 停止所有标签页的闪烁
-    for (const [tabId, tabInfo] of blinkingTabs) {
-      clearInterval(tabInfo.interval);
-      chrome.tabs.sendMessage(tabId, {
-        action: 'setFavicon',
-        url: tabInfo.originalFavicon
+    const tabId = sender.tab.id;
+    if (blinkIntervals[tabId]) {
+      clearInterval(blinkIntervals[tabId].interval);
+      clearTimeout(blinkIntervals[tabId].timeout);
+      chrome.tabs.get(tabId, function(tab) {
+        if (!chrome.runtime.lastError) {
+          chrome.tabs.sendMessage(tabId, {
+            action: 'setFavicon',
+            url: tab.favIconUrl
+          });
+        }
       });
+      delete blinkIntervals[tabId];
     }
-    blinkingTabs.clear();
   } else if (request.action === 'createNotification') {
-    // 创建Mac系统通知
-    const notificationId = 'timer_' + Date.now();
-    
-    // 存储通知ID和URL的映射关系
-    notificationUrlMap.set(notificationId, request.url);
-    
-    chrome.notifications.create(notificationId, request.options, function(id) {
-      if (chrome.runtime.lastError) {
-        console.error('创建通知失败:', chrome.runtime.lastError);
-      }
+    chrome.notifications.create({
+      type: request.options.type,
+      title: request.options.title,
+      message: request.options.message,
+      iconUrl: request.options.iconUrl,
+      priority: request.options.priority,
+      requireInteraction: request.options.requireInteraction,
+      buttons: request.options.buttons,
+      silent: request.options.silent,
+      eventTime: request.options.eventTime
     });
   }
-  return true;
-});
-
-// 处理通知点击事件
-chrome.notifications.onButtonClicked.addListener(function(notificationId, buttonIndex) {
-  const url = notificationUrlMap.get(notificationId);
-  if (url) {
-    // 查找并激活包含该URL的标签页
-    chrome.tabs.query({url: url}, function(tabs) {
-      if (tabs.length > 0) {
-        chrome.tabs.update(tabs[0].id, {active: true});
-        chrome.windows.update(tabs[0].windowId, {focused: true});
-      } else {
-        // 如果找不到标签页，则新建一个
-        chrome.tabs.create({url: url, active: true});
-      }
-    });
-    
-    // 清除通知
-    chrome.notifications.clear(notificationId);
-    notificationUrlMap.delete(notificationId);
-  }
-});
-
-// 处理通知关闭事件
-chrome.notifications.onClosed.addListener(function(notificationId) {
-  notificationUrlMap.delete(notificationId);
 }); 

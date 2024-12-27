@@ -2,11 +2,11 @@ document.addEventListener('DOMContentLoaded', function() {
   const toggleButton = document.getElementById('lockToggle');
   const statusText = document.getElementById('status');
   const noteTextarea = document.getElementById('noteInput');
-  const notePosition = document.getElementById('notePosition');
   const saveNoteButton = document.getElementById('saveNote');
 
   // 定时器相关的DOM元素
   const startTimeInput = document.getElementById('startTime');
+  const endTimeInput = document.getElementById('endTime');
   const minutesInput = document.getElementById('minutesInput');
   const targetTimeDisplay = document.getElementById('targetTimeDisplay');
   const cancelTimerButton = document.getElementById('cancelTimer');
@@ -98,7 +98,6 @@ document.addEventListener('DOMContentLoaded', function() {
       if (result[currentTab.url]) {
         const noteData = result[currentTab.url];
         noteTextarea.value = noteData.text || '';
-        notePosition.value = noteData.position?.position || 'top-right';
         
         // 如果有定时器数据，恢复定时器状态
         if (noteData.timer) {
@@ -122,6 +121,13 @@ document.addEventListener('DOMContentLoaded', function() {
   function calculateTargetTime(startTime, minutes) {
     const startDate = new Date(startTime);
     return new Date(startDate.getTime() + minutes * 60000);
+  }
+
+  // 计算两个时间之间的分钟数
+  function calculateMinutesBetween(startTime, endTime) {
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    return (end - start) / 60000; // 转换为分钟
   }
 
   // 更新目标时间显示
@@ -215,10 +221,50 @@ document.addEventListener('DOMContentLoaded', function() {
 
     } catch (error) {
       console.error('切换状态失败:', error);
-      statusText.textContent = '操作失败，请刷新页面重试';
+      statusText.textContent = '操作失败，请刷新���面重试';
       // 恢复按钮状态
       toggleButton.checked = !toggleButton.checked;
       updateStatus(!toggleButton.checked);
+    }
+  });
+
+  // 监听结束时间输入
+  endTimeInput.addEventListener('change', function() {
+    const endTime = endTimeInput.value.trim();
+    const startTime = startTimeInput.value.trim() || getCurrentFormattedTime();
+    
+    if (endTime && isValidTimeFormat(endTime)) {
+      if (!startTime) {
+        startTimeInput.value = getCurrentFormattedTime();
+      }
+      
+      const minutes = calculateMinutesBetween(startTime.replace(' ', 'T'), endTime.replace(' ', 'T'));
+      if (minutes > 0) {
+        minutesInput.value = minutes.toFixed(1);
+        const targetTime = new Date(endTime.replace(' ', 'T'));
+        updateTargetTimeDisplay(targetTime);
+      } else {
+        alert('结束时间必须晚于开始时间');
+        endTimeInput.value = '';
+        minutesInput.value = '';
+        targetTimeDisplay.textContent = '--:--:--';
+      }
+    }
+  });
+
+  // 监听分钟数输入
+  minutesInput.addEventListener('change', function() {
+    const minutes = parseFloat(minutesInput.value);
+    const startTime = startTimeInput.value.trim() || getCurrentFormattedTime();
+    
+    if (!isNaN(minutes) && minutes > 0) {
+      if (!startTime) {
+        startTimeInput.value = getCurrentFormattedTime();
+      }
+      
+      const targetTime = calculateTargetTime(startTime.replace(' ', 'T'), minutes);
+      endTimeInput.value = targetTime.toISOString().replace('T', ' ').slice(0, 19);
+      updateTargetTimeDisplay(targetTime);
     }
   });
 
@@ -237,12 +283,27 @@ document.addEventListener('DOMContentLoaded', function() {
       }
 
       const noteText = noteTextarea.value;
-      const position = notePosition.value;
-      const minutes = parseFloat(minutesInput.value);
+      let minutes = parseFloat(minutesInput.value);
       let startTime = startTimeInput.value.trim();
+      let endTime = endTimeInput.value.trim();
       let timerData = null;
 
-      // 如果输入了分钟数，则设置定时器
+      // 如果输入了结束时间但没有输入分钟数
+      if (endTime && !minutes) {
+        if (!startTime) {
+          startTime = getCurrentFormattedTime();
+          startTimeInput.value = startTime;
+        }
+        
+        if (!isValidTimeFormat(endTime)) {
+          alert('请输入正确的时间格式：YYYY-MM-DD HH:mm:ss');
+          return;
+        }
+        
+        minutes = calculateMinutesBetween(startTime.replace(' ', 'T'), endTime.replace(' ', 'T'));
+      }
+
+      // 如果输入了分钟数或结束时间，则设置定时器
       if (!isNaN(minutes) && minutes > 0) {
         if (!startTime) {
           startTime = getCurrentFormattedTime();
@@ -259,6 +320,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         timerData = {
           startTime,
+          endTime: targetTime.toISOString().replace('T', ' ').slice(0, 19),
           minutes,
           targetTime: targetTime.getTime()
         };
@@ -270,7 +332,6 @@ document.addEventListener('DOMContentLoaded', function() {
       const data = {};
       data[currentTab.url] = {
         text: noteText,
-        position: position,
         timer: timerData
       };
       await chrome.storage.local.set(data);
@@ -279,7 +340,6 @@ document.addEventListener('DOMContentLoaded', function() {
       const response = await sendMessageToContentScript(currentTab.id, {
         action: "updateNote",
         note: noteText,
-        position: position,
         timer: timerData
       });
 
@@ -314,6 +374,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
   initializeTimeInput();
   initializeTimerState();
+
+  // 设置开始时间默认为当前时间
+  startTimeInput.value = getCurrentFormattedTime();
+
+  // 每秒更新一次开始时间
+  setInterval(() => {
+    if (!startTimeInput.value || document.activeElement !== startTimeInput) {
+      startTimeInput.value = getCurrentFormattedTime();
+    }
+  }, 1000);
 });
 
 // 检查页面锁定状态

@@ -36,27 +36,45 @@
 }
 
 .time-input {
-  margin-bottom: 15px;
+  margin: 10px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 
 .time-input input {
-  width: 100%;
   padding: 8px;
-  margin-bottom: 5px;
-  border: 1px solid #ddd;
+  border: 1px solid #ccc;
   border-radius: 4px;
+  font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.time-input input:focus {
+  border-color: #2196f3;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
 }
 
 .time-format-hint {
   font-size: 12px;
   color: #666;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .target-time {
+  margin-top: 8px;
   font-size: 14px;
-  color: #666;
-  margin-top: 5px;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+#targetTimeDisplay {
+  font-weight: bold;
+  color: #2196f3;
 }
 
 #saveNote {

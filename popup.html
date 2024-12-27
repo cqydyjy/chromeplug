@@ -18,20 +18,14 @@
     <div class="note-section">
       <h2>页面备注</h2>
       <textarea id="noteInput" placeholder="输入备注内容..."></textarea>
-      <select id="notePosition">
-        <option value="center-top">页面中心偏上</option>
-        <option value="center">页面中心</option>
-        <option value="top-right">右上角</option>
-        <option value="top-left">左上角</option>
-        <option value="bottom-right">右下角</option>
-        <option value="bottom-left">左下角</option>
-      </select>
       
       <div class="timer-section">
         <div class="time-input">
           <input type="text" id="startTime" placeholder="开始时间 (2024-03-19 15:30:00)">
           <div class="time-format-hint">格式: YYYY-MM-DD HH:mm:ss</div>
-          <input type="number" id="minutesInput" placeholder="输入分钟数" min="0.1" step="0.1">
+          <input type="text" id="endTime" placeholder="结束时间 (可选)">
+          <div class="time-format-hint">格式: YYYY-MM-DD HH:mm:ss</div>
+          <input type="number" id="minutesInput" placeholder="输入分钟数 (可选)" min="0.1" step="0.1">
           <div class="target-time">
             <span>目标时间: </span>
             <span id="targetTimeDisplay">--:--:--</span>
