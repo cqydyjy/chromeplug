@@ -185,7 +185,7 @@ function restoreLockStatus() {
         element.style.pointerEvents = 'none';
       });
 
-      // 禁用所有链接
+      // 禁用���有链接
       const links = document.querySelectorAll('a');
       links.forEach(link => {
         link.style.pointerEvents = 'none';
@@ -217,7 +217,7 @@ function restoreLockStatus() {
   });
 }
 
-// 应用锁定/解锁
+// 应用锁/解锁
 function applyLock(isLocked) {
   if (isLocked) {
     // 添加锁定类
@@ -364,7 +364,7 @@ function updatePageNote(noteText, position = 'center-top', timerData = null) {
     noteElement.appendChild(toolbar);
     noteElement.appendChild(content);
     
-    // ��备注添加到容器
+    // 备��添加到容器
     container.appendChild(noteElement);
     
     // 添加到页面
@@ -605,7 +605,7 @@ function initNoteResize(noteElement) {
       newWidth = Math.max(100, newWidth);
       newHeight = Math.max(50, newHeight);
       
-      // 应用最大尺��限制
+      // 应用最大尺寸限制
       newWidth = Math.min(500, newWidth);
       newHeight = Math.min(400, newHeight);
 
@@ -642,7 +642,7 @@ function restoreNotePosition(container, position) {
       container.className = `note-container ${position.position}`;
     }
     
-    // 恢复备注��小
+    // 恢复备注大小
     const noteElement = container.querySelector('.page-note');
     if (noteElement && position.noteSize) {
       if (position.noteSize.width) noteElement.style.width = position.noteSize.width;
@@ -834,27 +834,52 @@ function updateCountdown(targetTime) {
   // 计算剩余时间
   const minutes = Math.floor(timeLeft / (1000 * 60));
   const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+  const displayText = `剩余时间: ${minutes}分${seconds}秒`;
 
   // 更新显示
   const countdownDisplay = document.getElementById('countdownDisplay');
   if (countdownDisplay) {
-    countdownDisplay.textContent = `剩余时间: ${minutes}分${seconds}秒`;
+    countdownDisplay.textContent = displayText;
   }
 }
 
 // 触发提醒
 function triggerReminder() {
+  const currentUrl = window.location.href;
+  const pageTitle = document.title;
+  
+  // 获取备注内容
+  const noteContent = document.querySelector('.note-content');
+  const noteText = noteContent ? noteContent.textContent.trim() : '';
+
   // 播放提示音
   const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgA');
   audio.play().catch(e => console.log('无法播放提示音:', e));
 
-  // 发送消息给background script来闪烁标签页
+  // 发送��息给background script来闪烁标签页和创建通知
   chrome.runtime.sendMessage({
-    action: 'startTabBlinking'
-  }, function(response) {
-    if (chrome.runtime.lastError) {
-      console.log('发送消息失败:', chrome.runtime.lastError.message);
-    }
+    action: 'startTabBlinking',
+    color: '#FFA500',
+    url: currentUrl
+  });
+
+  // 发送消息给background script来创建Mac系统通知
+  chrome.runtime.sendMessage({
+    action: 'createNotification',
+    options: {
+      type: 'basic',
+      title: '时间到！',
+      message: noteText || pageTitle || '您设置的定时器时间已到',
+      iconUrl: chrome.runtime.getURL('images/icon128.png'),
+      priority: 2,
+      requireInteraction: true,
+      buttons: [{
+        title: '点击跳转到页面'
+      }],
+      silent: false,
+      eventTime: Date.now() + 600000 // 设置通知持续时间为10分钟 (10 * 60 * 1000 毫秒)
+    },
+    url: currentUrl
   });
 
   // 添加闪烁效果到倒计时显示
@@ -868,44 +893,37 @@ function triggerReminder() {
   const originalTitle = document.title;
   let titleBlinkInterval = setInterval(() => {
     document.title = document.title === '⚠️ 时间到！' ? originalTitle : '⚠️ 时间到！';
-  }, 1000);
+  }, 500);
 
-  // 30秒后停止所有提醒效果
+  // 10分钟后停止所有提醒效果
   setTimeout(() => {
     clearInterval(titleBlinkInterval);
     document.title = originalTitle;
     
     // 发送消息停止标签闪烁
     chrome.runtime.sendMessage({
-      action: 'stopTabBlinking'
-    }, function(response) {
-      if (chrome.runtime.lastError) {
-        console.log('发送消息失败:', chrome.runtime.lastError.message);
-      }
+      action: 'stopTabBlinking',
+      url: currentUrl
     });
 
     // 清除定时器状态
-    const url = window.location.href;
-    chrome.storage.local.get([url], function(result) {
-      const data = result[url] || {};
+    chrome.storage.local.get([currentUrl], function(result) {
+      const data = result[currentUrl] || {};
       delete data.timer;
-      chrome.storage.local.set({ [url]: data });
+      chrome.storage.local.set({ [currentUrl]: data });
     });
 
     // 通知popup重置界面
     chrome.runtime.sendMessage({
-      action: 'timerComplete'
-    }, function(response) {
-      if (chrome.runtime.lastError) {
-        console.log('发送消息失败:', chrome.runtime.lastError.message);
-      }
+      action: 'timerComplete',
+      url: currentUrl
     });
 
     // 移除倒计时显示
     if (countdownDisplay) {
       countdownDisplay.remove();
     }
-  }, 30000);
+  }, 600000); // 修改为10分钟 (10 * 60 * 1000 毫秒)
 }
 
 // 设置定时器
@@ -1031,7 +1049,7 @@ function updateFavicon(color) {
   canvas.height = 16;
   const ctx = canvas.getContext('2d');
 
-  // 绘制圆形图标
+  // 绘制圆形标
   ctx.beginPath();
   ctx.arc(8, 8, 7, 0, 2 * Math.PI);
   ctx.fillStyle = color;

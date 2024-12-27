@@ -238,7 +238,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       const noteText = noteTextarea.value;
       const position = notePosition.value;
-      const minutes = parseInt(minutesInput.value);
+      const minutes = parseFloat(minutesInput.value);
       let startTime = startTimeInput.value.trim();
       let timerData = null;
 
